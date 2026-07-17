@@ -99,13 +99,17 @@ To view and interact with this dashboard, you will need **Power BI Desktop** ins
 - **Long-Term Recommendation**: The training manager should meet with team leaders and employees from each department to identify the skills they actually need. It is better to assign training hours to programs that are truly helpful for their daily work.
 - **Skill-Based Pay Implementation**: Since training is a significant investment, losing trained staff is a major financial hit. We need a reward system (such as skill-based pay) for those applying new skills to encourage them to stay and grow within the company rather than leaving for competitors.
 
+### Visualizations
+![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
+![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
+
 ---
 
 <span id="한국어-korean"></span>
 
 # 한국어 (Korean)
 
-이 프로젝트는 높은 직원 퇴사율의 근본적인 원인을 파악하기 위해 HR 데이터를 분석하는 데 중점을 둡니다. 채용, 업무 몰입도(Engagement), 교육 부문의 핵심 지표를 Power BI로 시각화함으로써, 이 대시보드는 직원 유지율을 개선하기 위한 데이터 기반 권장 사항을 제공합니다.
+이 프로젝트는 높은 직원 퇴사율의 근본적인 원인을 파악하기 위해 HR 데이터를 분석하는 데 중점을 봅니다. 채용, 업무 몰입도(Engagement), 교육 부문의 핵심 지표를 Power BI로 시각화함으로써, 이 대시보드는 직원 유지율을 개선하기 위한 데이터 기반 권장 사항을 제공합니다.
 
 ## 1. 프로젝트 목적
 이 분석의 주요 목적은 **"왜 직원이 퇴사하는가, 그리고 어떻게 해야 그들을 유지할 수 있는가?"**에 답하는 것입니다.
@@ -194,3 +198,7 @@ To view and interact with this dashboard, you will need **Power BI Desktop** ins
 - **단기 대책 (Quick-Win)**: 현재 직원들이 부적합한 교육 프로그램으로 시간과 에너지를 낭비하고 있습니다. 따라서 장기적인 개선책이 마련되기 전까지 교육 시간을 임시로 축소하여 직원의 피로도를 줄이고 교육 비용을 절감하는 조치가 필요합니다.
 - **장기 제안**: 교육 담당 부서는 각 부서의 팀장 및 구성원들과 면담을 진행해야 합니다. 이러한 논의를 통해 현업에서 필요로 하는 실제 역량이 무엇인지 파악하고, 실질적으로 업무에 직접적인 도움을 주는 프로그램에 교육 시간을 배정해야 합니다.
 - **기술 수당 및 보상 체계(Skill-Based Pay) 도입**: 직원 교육은 회사의 큰 투자이므로 교육된 우수 인재를 잃는 것은 큰 재정적 손실입니다. 습득한 새로운 기술을 업무에 적용하는 직원들을 위한 합당한 보상 및 평가 체계를 마련하여, 이들이 경쟁사로 이직하기보다 사내에서 성장하고 장기 근속하도록 장려해야 합니다.
+
+### 시각화 자료 (Visualizations)
+![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
+![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
