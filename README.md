@@ -14,94 +14,134 @@ This project focuses on analyzing HR data to identify the root causes of high em
 
 ## 1. Project Purpose
 The primary objective of this analysis is to answer: **"Why do employees leave, and how can we keep them?"**
-Through this exercise, I aim to:
-* Identify which department has the highest annual turnover
+Through this exercise, we aim to:
+* Identify which department has the highest annual turnover.
 * Correlate job satisfaction scores and training programs with employee turnover.
-* Correlate job satisfaction scores and training hours per employees 
-
-## 2. Data Model (ERD)
-The project utilizes a star-schema inspired model connecting four main tables:
-
-* **`employee_data`**: Contains master records of employees including Business Unit, Division, and Hire Date.
-* **`training_and_development`**: Tracks training costs, duration, and outcomes.
-* **`employee_engagement_data`**: Stores survey results such as Satisfaction, Work-Life Balance, and Engagement scores.
-* **`recruitment_data`**: Contains applicant details and recruitment timelines.
-
-I used employee data as bridge table. It is the bridge table with Training and development data and employee engagement survey data. The relationship is like below
-   - employee data : Training and development data = 1:many
-   - employee data : employee engagement survey data = 1:many
-   - recruitment data is an independent one. 
+* Correlate job satisfaction scores and training hours per employee.
 
 ---
 
-## 3. Installation & Setup
-To view and interact with this dashboard, you will need **Power BI Desktop** installed on your machine.
+## 2. ERD Design & Data Model
+The project utilizes a star-schema inspired model connecting four main tables:
+- **`employee_data`** (Bridge Table): Contains master records of employees including Business Unit, Division, and Hire Date.
+- **`training_and_development`**: Tracks training costs, duration, and outcomes.
+- **`employee_engagement_data`**: Stores survey results such as Satisfaction, Work-Life Balance, and Engagement scores.
+- **`recruitment_data`**: Contains applicant details and recruitment timelines.
 
-1. **Download Power BI Desktop**:
-   - Go to the [Official Microsoft Power BI Download Page](https://powerbi.microsoft.com/desktop/).
-   - Click "Download Free" or get it from the Microsoft Store.
-2. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/sano035-design/HR-data-analysis-.git
-   ```
+### Key Relationships
+- **`employee_data` : `training_and_development` = 1 : Many**
+- **`employee_data` : `employee_engagement_data` = 1 : Many**
+- **`recruitment_data`**: Independent entity.
 
-## 4. Data Cleaning & Assumptions
-1. **Cleaning**
-   - I think empID is same with employee ID in the Training, Survey Entity so I have changed empID to employee ID.
-   - DOB in the employee data entity fitted to Date of Birth in the recruitment for column name consistence.
-   - Title in the employee data entity fitted to Job title in the recruitment for column name consistence.
-   - GenderCode and LocationCode in the data entity fitted to Gender and Zip code in the recruitment data for column name consistence.
-   - ADEmail is changed to email.
-   - There is data type issue with Phone Number supposed to be a Number and Phone number format is not consistent, so I had to fit them as same format.
-   - Also, some phone number have an external number. I wanted to make a new column for it. 
+*Note on Relationship Update:* Initially, relationships were set as 1-to-1. However, to accommodate future updates where one employee could take another training session or respond to multiple surveys, the model was updated to 1-to-many. The bridge table resolves the many-to-many relationship between the 'Survey' and 'Training' entities, ensuring data integrity by creating a clear granular link and avoiding double-counting of metrics (e.g., satisfaction scores).
 
-2. **DAX**
-   - **Tenure (Days)**
-     ```dax
-     Tenure (Days) = IF(ISBLANK(employee_data[ExitDate]), DATEDIFF(employee_data[StartDate], TODAY(), DAY), DATEDIFF(employee_data[StartDate], employee_data[ExitDate], DAY))
-     ```
-     - These are the days employees have been working here.
-     - Since employees can quit, we check if the employee left the company or not. If the employee left, we calculate the tenure up to their exit date.
+---
 
-   - **Annual Turnover %**
-     ```dax
-     Annual Turnover % = DIVIDE([Leavers CY], [Average Head-Count CY])
-     ```
-     - Measures how many employees leave our company for a certain period.
-     - `Leavers CY`: Number of employees who left the company this year.
-     - Assuming the current year is 2023 (based on the latest survey year and hire records).
-     - This measure counts the number of employees leaving in 2023 (which is 596).
-     - DAX implementation:
-       ```dax
-       Leavers CY = 
-       VAR LatestYear = 2023
-       RETURN
-       CALCULATE(
-           COUNT(employee_data[Employee ID]),
-           YEAR(employee_data[ExitDate]) = LatestYear
-       )
-       ```
+## 3. Data Familiarization & Cleaning
+The following cleaning steps were applied to the imported CSV files in Power Query:
 
-   - **Training Hours per FTE**
-     - Measures the training hours per employee.
-     - Training duration was provided in days, so a new column was created in the table view using 8 hours per day (global standard for working hours).
-     - Since counting `Employee ID` includes employees who have already left, we used the average head-count of active employees in the current year (1,598).
-     - Result: **44.70 hours** per employee.
+### 1) Employee Data
+- **Column Consistency**: Changed `empID` to `employee ID` to match Training and Survey entities.
+- **Column Renaming**: 
+  - Fitted `DOB` to `Date of Birth` to align with recruitment data.
+  - Fitted `Title` to `Job title` to align with recruitment data.
+  - Fitted `GenderCode` and `LocationCode` to `Gender` and `Zip code` for consistency.
+  - Renamed `ADEmail` to `email`.
+- **Validation**: Checked for duplicates on `Employee ID` and `First/Last Name`. No duplicates were found.
 
-## 5. Insights & Key Findings
-- **High Turnover Rate**: The data shows that our company’s average turnover rate is 37%, which is significantly higher than the global average of 10% to 13%. As shown in the 'Departmental Turnover Rate' chart, this high turnover disrupts project continuity, slows down work, and ultimately hurts our revenue.
-- **Training Mismatch**: The core issue is a training mismatch. Employees are forced to spend too much time on irrelevant programs instead of the essential skills they need for their daily jobs, leading to low morale and satisfaction.
-- **Counter-Intuitive Trend**: Initially, I hypothesized that poor training satisfaction would drive turnover. However, the data reveals a counter-intuitive trend between turnover and average satisfaction scores by division.
-- **Technical Skills Brain Drain**: Technical Skills training has the highest satisfaction yet also the highest turnover. This suggests that while the training program is effective, the company may be failing to retain these newly upskilled employees, leading to a 'brain drain' effect where skilled staff seek better opportunities elsewhere.
+### 2) Employee Engagement Survey Data
+- Verified data types and confirmed there were no duplicate entries.
+
+### 3) Recruitment Data
+- **Phone Number Formatting**:
+  - Addressed datatype and consistency issues for the phone numbers.
+  - Split the phone number column by the custom delimiter `x` to isolate external extension numbers into a new column (`External number`).
+  - Removed special characters (e.g., `#` symbols).
+  - Kept only digit values under the primary phone number.
+  - Extracted components into separate custom columns:
+    - **`employee number`**: `Text.End([phone number], 7)`
+    - **`Area code`**: `Text.Start(Text.End([phone number], 10), 3)`
+    - **`Country code`**: `= if [phone number] = null or Text.Length([phone number]) <= 10 then "1" else Text.Start([phone number], Text.Length([phone number]) - 10)`
+  - Formatted all phone components as Text since they are not used for calculations.
+
+### 4) Training and Development Data
+- Confirmed data types and verified there were no duplicate entries.
+
+---
+
+## 4. DAX & Measures
+We hid technical columns (like Primary Keys and Foreign Keys) from the report view to keep it clean and created the following measures:
+
+- **Tenure (Days)**
+  ```dax
+  Tenure (Days) = IF(ISBLANK(employee_data[ExitDate]), DATEDIFF(employee_data[StartDate], TODAY(), DAY), DATEDIFF(employee_data[StartDate], employee_data[ExitDate], DAY))
+  ```
+  - Calculates the days employees have worked. If they have left, it calculates up to their `ExitDate`.
+
+- **Annual Turnover %**
+  ```dax
+  Annual Turnover % = DIVIDE([Leavers CY], [Average Head-Count CY])
+  ```
+  - **Leavers CY** (Assuming 2023 is the latest year):
+    ```dax
+    Leavers CY = 
+    VAR LatestYear = 2023
+    RETURN
+    CALCULATE(
+        COUNT(employee_data[Employee ID]),
+        YEAR(employee_data[ExitDate]) = LatestYear
+    )
+    ```
+    - Counts the number of employees leaving in 2023 (Result: 596).
+  - **Average Head-Count CY**:
+    - Calculates the average headcount based on the start (01/01/2023) and end (31/12/2023) of the calendar year to account for staff fluctuations (Result: 1,598).
+  - **Resulting Annual Turnover %**: **37%** (significantly higher than the global average of 10% to 13%).
+
+- **Training Hours per FTE**
+  ```dax
+  Training Hours per FTE = DIVIDE(SUM(training_and_development_data[Training Hours]), [Average Head-Count CY])
+  ```
+  - *Note:* Training duration was converted to hours assuming 8 hours per training day. The average employee headcount of 1,598 was used as the denominator.
+  - **Result**: **44.70 hours** per employee.
+
+---
+
+## 5. Visual Creation & Dashboard Details
+We created a Power BI Dashboard containing two main views:
+
+### Dashboard 1: "Why do our employees leave the company?"
+Focuses on tracking key metrics (Leavers CY, Average Head-Count, Annual Turnover %, Training Hours per FTE) and breakdown visuals:
+- **Annual Turnover % by Division**: Billable Consultants have the highest turnover rate at 95%. Turnovers for most divisions are in the high-risk range of 30% to 60%.
+- **Training Hours per FTE by Training Program Name**: Highlights a mismatch where Billable Consultants spend significant hours on Leadership (128 hours) and Customer Service (112 hours) instead of the Technical Skills they actually need for client work.
+- **Turnover and Average Satisfaction Score**: Satisfaction scores are low (between 2.8 and 3.3 out of 5). Interestingly, Technical Skills training has the highest satisfaction but also the highest turnover, indicating a "Brain Drain" effect where employees seek better external opportunities once upskilled.
+
+![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
+
+### Dashboard 2: "How many applicants do get the job?"
+Focuses on analyzing the recruitment funnel and applicant demographics:
+- **Recruitment Funnel**: Out of 3,000 applicants in 2023, the company offered positions to 610, while 596 employees left in the same year.
+- **Desired Salary**: Most applicants desired salaries of 40K and 50K, while 90K also showed high rates.
+- **Age Distribution**: Applicants in their 40s and 50s occupied approximately 65% of the applicant pool.
+
+![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
+
+---
 
 ## 6. Suggested Solutions
-- **Quick-Win Action**: Employees are currently wasting their time and energy on the wrong training programs. Therefore, we should temporarily reduce training hours until a long-term solution is ready. Reducing training time will lower employee frustration and save the company money.
-- **Long-Term Recommendation**: The training manager should meet with team leaders and employees from each department to identify the skills they actually need. It is better to assign training hours to programs that are truly helpful for their daily work.
-- **Skill-Based Pay Implementation**: Since training is a significant investment, losing trained staff is a major financial hit. We need a reward system (such as skill-based pay) for those applying new skills to encourage them to stay and grow within the company rather than leaving for competitors.
+- **Quick-Win Action**: Temporarily reduce training hours for irrelevant programs to decrease employee frustration and save training costs until a tailored program is ready.
+- **Long-Term Recommendation**: Align training hours with the specific needs of each department by organizing feedback meetings between the training manager and team leaders.
+- **Skill-Based Pay Implementation**: Introduce reward systems and skill-based pay structures to retain newly upskilled employees, preventing them from leaving for competitors after receiving training.
 
-### Visualizations
-![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
-![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
+---
+
+## 7. Saving & Publishing
+The dashboard is published to Power BI Service.
+- **Power BI Live Dashboard Link**: [Access Power BI Dashboard](https://app.powerbi.com/links/TKsKSERn4Z?ctid=18a14c48-52ad-49d5-953ad38bc2b611ee&pbi_source=linkShare&bookmarkGuid=9b52a7fb-a777-400b-a788-27c97146174d-58e96113b15c)
+
+---
+
+## 8. Challenge & Reflection
+* **Entity Relationships**: A key challenge resolved during the ERD design was setting up appropriate relationships. Changing the connection from 1-to-1 to 1-to-many ensures the model remains scalable for future updates, allowing multiple training sessions and surveys per employee.
 
 ---
 
@@ -109,7 +149,7 @@ To view and interact with this dashboard, you will need **Power BI Desktop** ins
 
 # 한국어 (Korean)
 
-이 프로젝트는 높은 직원 퇴사율의 근본적인 원인을 파악하기 위해 HR 데이터를 분석하는 데 중점을 봅니다. 채용, 업무 몰입도(Engagement), 교육 부문의 핵심 지표를 Power BI로 시각화함으로써, 이 대시보드는 직원 유지율을 개선하기 위한 데이터 기반 권장 사항을 제공합니다.
+이 프로젝트는 높은 직원 퇴사율의 근본적인 원인을 파악하기 위해 HR 데이터를 분석하는 데 중점을 둡니다. 채용, 업무 몰입도(Engagement), 교육 부문의 핵심 지표를 Power BI로 시각화함으로써, 이 대시보드는 직원 유지율을 개선하기 위한 데이터 기반 권장 사항을 제공합니다.
 
 ## 1. 프로젝트 목적
 이 분석의 주요 목적은 **"왜 직원이 퇴사하는가, 그리고 어떻게 해야 그들을 유지할 수 있는가?"**에 답하는 것입니다.
@@ -118,87 +158,126 @@ To view and interact with this dashboard, you will need **Power BI Desktop** ins
 * 직무 만족도 점수 및 교육 프로그램과 직원 퇴사율 간의 상관관계 파악
 * 직무 만족도 점수와 직원당 교육 시간 간의 상관관계 파악
 
-## 2. 데이터 모델 (ERD)
+---
+
+## 2. ERD 설계 및 데이터 모델
 이 프로젝트는 네 개의 주요 테이블을 연결하는 스타 스키마(Star-Schema) 기반 모델을 사용합니다:
+- **`employee_data`** (브릿지 테이블): 사업부(Business Unit), 부서(Division), 입사일(Hire Date) 등 직원의 마스터 레코드를 포함합니다.
+- **`training_and_development`**: 교육 비용, 기간 및 결과를 추적합니다.
+- **`employee_engagement_data`**: 만족도, 워라밸(Work-Life Balance), 몰입도 점수 등의 설문조사 결과를 저장합니다.
+- **`recruitment_data`**: 지원자 정보 및 채용 일정을 포함합니다.
 
-* **`employee_data`**: 사업부(Business Unit), 부서(Division), 입사일(Hire Date) 등 직원의 마스터 레코드를 포함합니다.
-* **`training_and_development`**: 교육 비용, 기간 및 결과를 추적합니다.
-* **`employee_engagement_data`**: 만족도, 워라밸(Work-Life Balance), 몰입도 점수 등의 설문조사 결과를 저장합니다.
-* **`recruitment_data`**: 지원자 정보 및 채용 일정을 포함합니다.
+### 핵심 관계 설정
+- **`employee_data` : `training_and_development` = 1 : 다 (1:Many)**
+- **`employee_data` : `employee_engagement_data` = 1 : 다 (1:Many)**
+- **`recruitment_data`**: 독립 테이블
 
-`employee_data`를 브릿지 테이블(Bridge Table)로 사용하여 `training_and_development` 및 `employee_engagement_data` 테이블과 연계했습니다. 관계는 다음과 같습니다:
-- `employee_data` : `training_and_development` = 1:다 (1:Many)
-- `employee_data` : `employee_engagement_survey_data` = 1:다 (1:Many)
-- `recruitment_data`는 독립 테이블입니다.
+*관계 설정 변경에 대한 설명:* 초기에는 관계를 1:1로 설정했으나, 향후 데이터 업데이트 시 한 직원이 여러 교육을 이수하거나 설문에 여러 번 참여할 수 있는 시나리오를 반영하기 위해 1:다(1:Many) 관계로 모델을 변경했습니다. `employee_data` 테이블을 브릿지 테이블로 활용하여 설문과 교육 엔티티 간의 다대다 관계를 논리적으로 풀어냈으며, 이를 통해 데이터의 무결성을 지키고 만족도 점수 등의 핵심 지표가 중복 집계되지 않도록 방지했습니다.
 
 ---
 
-## 3. 설치 및 설정
-이 대시보드를 확인하고 상호작용하려면 시스템에 **Power BI Desktop**이 설치되어 있어야 합니다.
+## 3. 데이터 파악 및 정제
+Power Query를 통해 각 CSV 파일에 다음과 같은 데이터 정제 단계를 적용했습니다:
 
-1. **Power BI Desktop 다운로드**:
-   - [Microsoft Power BI 공식 다운로드 페이지](https://powerbi.microsoft.com/desktop/)로 이동합니다.
-   - "무료 다운로드"를 클릭하거나 Microsoft Store에서 설치합니다.
-2. **저장소 클론**:
-   ```bash
-   git clone https://github.com/sano035-design/HR-data-analysis-.git
-   ```
+### 1) Employee Data (직원 데이터)
+- **컬럼명 일관성 확보**: `training_and_development` 및 `employee_engagement_data` 테이블의 `empID`를 `employee ID`로 통합했습니다.
+- **열 이름 매칭**:
+  - `DOB`를 채용 데이터와 맞추어 `Date of Birth`로 수정했습니다.
+  - `Title`을 채용 데이터와 맞추어 `Job title`로 수정했습니다.
+  - `GenderCode` 및 `LocationCode`를 채용 데이터의 형식에 맞추어 `Gender` 및 `Zip code`로 표준화했습니다.
+  - `ADEmail`을 `email`로 변경했습니다.
+- **무결성 검사**: `Employee ID` 및 `First/Last Name` 컬럼을 확인하여 중복 데이터가 없음을 검증했습니다.
 
-## 4. 데이터 정제 및 가정
-1. **데이터 정제 (Cleaning)**
-   - `training_and_development` 및 `employee_engagement_data` 엔티티의 `empID`가 `employee_data`의 `employee ID`와 동일하다고 판단하여, 일관성을 위해 `empID`를 `employee ID`로 변경했습니다.
-   - 컬럼명 일관성을 위해 `employee_data` 엔티티의 `DOB`를 `recruitment_data`의 `Date of Birth`로 맞추었습니다.
-   - 컬럼명 일관성을 위해 `employee_data` 엔티티의 `Title`을 `recruitment_data`의 `Job title`로 맞추었습니다.
-   - 컬럼명 일관성을 위해 `employee_data` 엔티티의 `GenderCode` 및 `LocationCode`를 각각 `recruitment_data`의 `Gender` 및 `Zip code`에 맞추어 통합했습니다.
-   - `ADEmail`을 `email`로 변경했습니다.
-   - 전화번호(Phone Number) 열의 데이터 형식이 숫자형이어야 함에도 형식이 불일치하는 문제가 있어, 이를 일관된 포맷으로 정리했습니다.
-   - 또한 일부 전화번호에 내선 번호(external number)가 포함되어 있어, 이를 위한 별도의 열을 신규 생성하고자 했습니다.
+### 2) Employee Engagement Survey Data (설문 조사 데이터)
+- 데이터 형식을 확인하고 중복 데이터가 없음을 검증했습니다.
 
-2. **DAX 공식**
-   - **근속 기간 (Tenure Days)**
-     ```dax
-     Tenure (Days) = IF(ISBLANK(employee_data[ExitDate]), DATEDIFF(employee_data[StartDate], TODAY(), DAY), DATEDIFF(employee_data[StartDate], employee_data[ExitDate], DAY))
-     ```
-     - 이는 직원이 현재 재직 중인 기간을 나타냅니다.
-     - 퇴사자가 존재하므로 퇴사 여부를 반영할 수 있도록 수정했습니다. 직원이 퇴사한 경우 퇴사일(`ExitDate`)까지의 일수를 계산합니다.
+### 3) Recruitment Data (채용 데이터)
+- **전화번호 포맷 정제**:
+  - 데이터 형식 오류 및 일관되지 않은 입력 형식을 교정했습니다.
+  - 구분자 `x`를 기준으로 컬럼을 분할하여 내선 번호를 별도 열(`External number`)로 분리했습니다.
+  - 특수 문자(예: `#`)를 일괄 제거했습니다.
+  - 대표 전화번호 컬럼에는 숫자 데이터만 남겼습니다.
+  - 세부 요소를 추출하기 위해 다음과 같은 Power Query 수식으로 사용자 정의 컬럼을 추가했습니다:
+    - **`employee number`**: `Text.End([phone number], 7)` (개인 고유 번호)
+    - **`Area code`**: `Text.Start(Text.End([phone number], 10), 3)` (지역 번호)
+    - **`Country code`**: `= if [phone number] = null or Text.Length([phone number]) <= 10 then "1" else Text.Start([phone number], Text.Length([phone number]) - 10)` (국가 번호)
+  - 전화번호 구성 요소들은 사칙연산에 쓰이지 않으므로 모두 텍스트(Text) 형식으로 지정했습니다.
 
-   - **연간 퇴사율 (Annual Turnover %)**
-     ```dax
-     Annual Turnover % = DIVIDE([Leavers CY], [Average Head-Count CY])
-     ```
-     - 특정 기간 동안 회사에서 이탈하는 직원의 비율입니다.
-     - `Leavers CY`: 올해 퇴사한 직원 수
-     - 데이터의 기준 시점은 불명확하나, 2023년에 근무를 시작한 데이터가 가장 최근 데이터이며 만족도 설문조사 연도를 고려할 때 현재 연도를 2023년으로 가정할 수 있습니다.
-     - 작성한 DAX식은 가장 최근 연도인 2023년에 퇴사한 직원의 수를 집계하며, 이 값은 596명입니다.
-     - `employee_data` 엔티티에 새로운 측정값을 생성하고 카드 시각화 개체로 표현했습니다.
-     - DAX 코드:
-       ```dax
-       Leavers CY = 
-       VAR LatestYear = 2023
-       RETURN
-       CALCULATE(
-           COUNT(employee_data[Employee ID]),
-           YEAR(employee_data[ExitDate]) = LatestYear
-       )
-       ```
+### 4) Training and Development Data (교육 데이터)
+- 데이터 형식을 확인하고 중복 데이터가 없음을 검증했습니다.
 
-   - **직원당 교육 시간 (Training Hours per FTE)**
-     - 교육 기간이 '일(days)' 단위로 되어 있어, 일일 표준 근무 시간을 글로벌 표준인 8시간으로 가정하여 테이블 뷰에 새 열을 생성했습니다.
-     - 퇴사자가 포함된 단순 `Employee ID` 개수는 사용할 수 없으므로, 올해 평균 임직원 수인 1,598명을 최신 직원 수 기준으로 사용하기로 결정했습니다.
-     - 교육 엔티티에 새 측정값을 생성했습니다.
-     - 분석 결과, 직원당 교육 시간(`Training Hours per FTE`)은 **44.70시간**으로 나타났습니다.
+---
 
-## 5. 주요 인사이트 및 분석 결과
-- **높은 이탈률**: 분석 결과 회사의 평균 퇴사율은 **37%**로, 글로벌 평균 수준인 10%~13%보다 현저히 높습니다. '부서별 퇴사율' 차트에서 볼 수 있듯이, 이러한 높은 퇴사율은 프로젝트의 연속성을 해치고 업무 진행을 지연시켜 결과적으로 회사 매출에 부정적인 영향을 미칩니다.
-- **교육 불일치 (Training Mismatch)**: 핵심 문제는 직무 연관성 부족입니다. 직원들이 실제 업무에 필요한 핵심 역량을 개발하는 대신 업무와 무관한 비효율적인 교육 프로그램에 지나치게 많은 시간을 빼앗기고 있어 사기와 직무 만족도가 떨어지고 있습니다.
-- **반전의 결과**: 분석 초기에는 교육 만족도가 낮을수록 퇴사율이 높을 것이라 예상했으나, 부서별 퇴사율과 평균 만족도 점수를 비교한 결과 직관과 다른 경향성이 나타났습니다.
-- **전문 기술 교육(Technical Skills)의 딜레마**: 기술 교육은 만족도가 가장 높았으나 이와 동시에 퇴사율도 가장 높았습니다. 이는 교육 프로그램 자체는 효과적이나, 회사가 고도화된 스킬을 갖춘 인재들을 유지하지 못하여 교육받은 숙련 인재들이 더 나은 대우를 찾아 이직하는 '인재 유출(Brain Drain)' 현상이 발생하고 있음을 시사합니다.
+## 4. DAX 공식 및 측정값
+보고서 뷰의 가독성을 높이기 위해 불필요한 기술적 컬럼(기본 키, 외래 키 등)은 숨김 처리하였으며, 다음과 같은 DAX 측정값을 구현했습니다:
+
+- **근속 기간 (Tenure Days)**
+  ```dax
+  Tenure (Days) = IF(ISBLANK(employee_data[ExitDate]), DATEDIFF(employee_data[StartDate], TODAY(), DAY), DATEDIFF(employee_data[StartDate], employee_data[ExitDate], DAY))
+  ```
+  - 직원의 총 재직 일수를 계산합니다. 이미 퇴사한 직원의 경우 퇴사일(`ExitDate`) 기준으로 재직 기간을 계산합니다.
+
+- **연간 퇴사율 (Annual Turnover %)**
+  ```dax
+  Annual Turnover % = DIVIDE([Leavers CY], [Average Head-Count CY])
+  ```
+  - **Leavers CY** (최신 연도인 2023년 기준 퇴사자 수):
+    ```dax
+    Leavers CY = 
+    VAR LatestYear = 2023
+    RETURN
+    CALCULATE(
+        COUNT(employee_data[Employee ID]),
+        YEAR(employee_data[ExitDate]) = LatestYear
+    )
+    ```
+    - 2023년에 회사를 떠난 직원의 수를 집계합니다 (결과: 596명).
+  - **Average Head-Count CY** (연간 평균 임직원 수):
+    - 시점 스냅샷 대신 직원 수 변동 추이를 반영하기 위해 2023년 시작일(01/01/2023)과 종료일(31/12/2023) 기준 인원의 평균값으로 분모를 계산했습니다 (결과: 1,598명).
+  - **연간 퇴사율 결과**: **37%** (글로벌 평균인 10%~13%보다 현저히 높은 수준).
+
+- **직원당 교육 시간 (Training Hours per FTE)**
+  ```dax
+  Training Hours per FTE = DIVIDE(SUM(training_and_development_data[Training Hours]), [Average Head-Count CY])
+  ```
+  - *참고:* 교육 일수를 하루 8시간 근로 기준으로 환산하여 총 교육 시간을 산출하였으며, 분모로는 올해 평균 임직원 수(1,598명)를 반영했습니다.
+  - **결과**: 직원당 연평균 **44.70시간**.
+
+---
+
+## 5. 시각화 및 대시보드 세부 정보
+Power BI를 통해 두 가지 메인 대시보드 뷰를 생성했습니다:
+
+### 대시보드 1: "Why do our employees leave the company? (왜 직원이 퇴사하는가?)"
+핵심 유지 지표(퇴사자 수, 평균 직원 수, 퇴사율, 직원당 교육 시간) 및 세부 현황을 시각화합니다:
+- **부서별 연간 퇴사율**: 청구 가능 컨설턴트(Billable Consultants)의 퇴사율이 95%로 가장 높았으며, 대부분 부서가 30%~60%의 고위험 퇴사율 범주에 속해 있습니다.
+- **교육 프로그램별 직원당 교육 시간**: 청구 가능 컨설턴트들이 업무에 꼭 필요한 '전문 기술 교육(Technical Skills)' 대신, 리더십 교육(128시간)이나 고객 서비스 교육(112시간)에 과도한 시간을 할애하고 있는 교육 불일치(Mismatch) 양상을 포착했습니다.
+- **퇴사율 및 평균 만족도 분석**: 대부분 부서의 만족도는 2.8~3.3점(5점 만점) 수준으로 낮았습니다. 흥미롭게도 기술 교육은 만족도가 높은 편이었으나 퇴사율도 동시에 매우 높았는데, 이는 교육을 통해 역량을 강화한 직원들을 유지할 유인이 부족하여 발생하는 '인재 유출(Brain Drain)' 현상을 설명해 줍니다.
+
+![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
+
+### 대시보드 2: "How many applicants do get the job? (얼마나 많은 지원자가 합격하는가?)"
+채용 깔대기(Funnel) 및 지원자 통계를 분석합니다:
+- **채용 깔대기**: 2023년 총 지원자 3,000명 중 최종 합격 오퍼를 받은 인원은 610명이었으며, 같은 해 퇴사자 수는 596명으로 집계되었습니다.
+- **희망 연봉**: 40K 및 50K 구간의 희망 비율이 가장 높았으며, 상대적으로 높은 수준인 90K 구간의 희망 비율도 상당한 비중을 보였습니다.
+- **연령대 분포**: 40대와 50대 이상의 지원자가 전체 지원 풀의 약 65%를 차지하는 흥미로운 연령대 집중도가 관찰되었습니다.
+
+![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
+
+---
 
 ## 6. 제안하는 해결 방안
-- **단기 대책 (Quick-Win)**: 현재 직원들이 부적합한 교육 프로그램으로 시간과 에너지를 낭비하고 있습니다. 따라서 장기적인 개선책이 마련되기 전까지 교육 시간을 임시로 축소하여 직원의 피로도를 줄이고 교육 비용을 절감하는 조치가 필요합니다.
-- **장기 제안**: 교육 담당 부서는 각 부서의 팀장 및 구성원들과 면담을 진행해야 합니다. 이러한 논의를 통해 현업에서 필요로 하는 실제 역량이 무엇인지 파악하고, 실질적으로 업무에 직접적인 도움을 주는 프로그램에 교육 시간을 배정해야 합니다.
-- **기술 수당 및 보상 체계(Skill-Based Pay) 도입**: 직원 교육은 회사의 큰 투자이므로 교육된 우수 인재를 잃는 것은 큰 재정적 손실입니다. 습득한 새로운 기술을 업무에 적용하는 직원들을 위한 합당한 보상 및 평가 체계를 마련하여, 이들이 경쟁사로 이직하기보다 사내에서 성장하고 장기 근속하도록 장려해야 합니다.
+- **단기 대책 (Quick-Win)**: 장기 솔루션이 수립되기 전까지 무관한 프로그램의 교육 시간을 감축하여 불필요한 직원의 리소스 낭비를 줄이고 비용을 절감합니다.
+- **장기 제안**: 교육 담당 부서와 부서장 간의 정기 조율 미팅을 정례화하여 실무에 직접적으로 도움이 되는 필요 핵심 역량 위주로 교육을 재구성합니다.
+- **기술 수당 및 평가 체계(Skill-Based Pay) 도입**: 교육을 수료하고 고역량 스킬을 갖춘 내부 직원이 경쟁사로 이탈하지 않고 사내에서 함께 성장할 수 있도록 명확한 평가 및 스킬 기반 보상 제도를 설계합니다.
 
-### 시각화 자료 (Visualizations)
-![Why do our employees leave the company](images/Why%20do%20our%20employees%20leave%20the%20company.jpg)
-![How many applicants do get the job](images/How%20many%20applicants%20do%20get%20the%20job.jpg)
+---
+
+## 7. 저장 및 게시 (Saving & Publishing)
+작성된 대시보드는 Power BI 클라우드 서비스에 게시되었습니다.
+- **Power BI 대시보드 바로가기**: [대시보드 라이브 링크](https://app.powerbi.com/links/TKsKSERn4Z?ctid=18a14c48-52ad-49d5-953ad38bc2b611ee&pbi_source=linkShare&bookmarkGuid=9b52a7fb-a777-400b-a788-27c97146174d-58e96113b15c)
+
+---
+
+## 8. 문제 해결 및 회고
+* **엔티티 간의 관계 정의**: 설계 시 가장 중요한 도전 과제는 테이블 간의 연결 방식이었습니다. 초기 1:1 관계에서 1:다(1:Many) 관계로의 성공적인 피드백 루프 전환은 추가적인 데이터 변동 상황에서도 모델의 확장성을 제공하며 정교한 크로스 필터링 무결성을 가능케 했습니다.
